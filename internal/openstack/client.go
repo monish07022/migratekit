@@ -172,15 +172,27 @@ func (c *ClientSet) EnsurePortsForVirtualMachine(ctx context.Context, vm *object
 	for _, nic := range nics {
 		card := nic.(types.BaseVirtualEthernetCard).GetVirtualEthernetCard()
 
-		mapping, ok := networkMappings.Mappings[card.MacAddress]
+		/*mapping, ok := networkMappings.Mappings[card.MacAddress]
 		if !ok {
 			return nil, errors.New("no network mapping found for MAC address")
+		} Old pattern mapping */
+
+		mac := strings.ToLower(card.MacAddress)
+		mapping, ok := networkMappings.Mappings[mac]
+		if !ok {
+		    return nil, errors.New("no network mapping found for MAC address " + mac)
 		}
 
-		pages, err := ports.List(c.Networking, ports.ListOpts{
+		/*pages, err := ports.List(c.Networking, ports.ListOpts{
 			NetworkID:  mapping.NetworkID.String(),
 			MACAddress: card.MacAddress,
+		}).AllPages(ctx) Old pattern mapping */
+
+		pages, err := ports.List(c.Networking, ports.ListOpts{
+		    NetworkID:  mapping.NetworkID.String(),
+		    MACAddress: mac,
 		}).AllPages(ctx)
+
 		if err != nil {
 			return nil, err
 		}
@@ -209,14 +221,25 @@ func (c *ClientSet) EnsurePortsForVirtualMachine(ctx context.Context, vm *object
 			}
 
 			opts := ctx.Value("portCreateOpts").(*PortCreateOpts)
-			port, err = ports.Create(ctx, c.Networking, ports.CreateOpts{
+			/*port, err = ports.Create(ctx, c.Networking, ports.CreateOpts{
 				NetworkID:      mapping.NetworkID.String(),
 				Name:           card.DeviceInfo.GetDescription().Label,
 				Description:    card.DeviceInfo.GetDescription().Summary,
 				MACAddress:     card.MacAddress,
 				FixedIPs:       ips,
 				SecurityGroups: opts.SecurityGroups,
+			}).Extract() Old pattern mapping*/
+
+			port, err = ports.Create(ctx, c.Networking, ports.CreateOpts{
+			    NetworkID:      mapping.NetworkID.String(),
+			    Name:           card.DeviceInfo.GetDescription().Label,
+			    Description:    card.DeviceInfo.GetDescription().Summary,
+			    MACAddress:     mac,
+			    FixedIPs:       ips,
+			    SecurityGroups: opts.SecurityGroups,
 			}).Extract()
+
+
 			if err != nil {
 				return nil, err
 			}
